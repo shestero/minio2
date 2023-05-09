@@ -38,33 +38,30 @@ object Main extends IOApp with Utils {
       Try {
         val connection = connect(url)
 
-        val contentLengthOpt = Option(connection.getContentLength).filter(_ >= 0) // -1 if unknown
+        val contentLengthOpt: Option[Int] = Option(connection.getContentLength).filter(_ >= 0) // -1 if unknown
         val contentType = Option(connection.getContentType) getOrElse ApplicationOctetStream.toString
         println("contentLength=" + contentLengthOpt)
         println("contentType=" + contentType)
 
-        //val List(toClient, toCache) = connection.inputStream.duplicate
+        // duplicate connection.inputStream: InputStream
+        val it: Iterator[Int] = connection.inputStream.iterator
+        val (it1, it2) = it.duplicate
+        val (toClient, toMinio) = (it1.inputStream, it2.inputStream)
 
         Future {
           // save to Minio
-          // do some delay here
-          val connection = connect(url)
-          val contentLengthOpt = Option(connection.getContentLength).filter(_ >= 0) // -1 if unknown
-          val contentType = Option(connection.getContentType) getOrElse ApplicationOctetStream.toString
-          contentLengthOpt match {
-            case None => // length unknown
-              val blob: Array[Byte] = connection.inputStream.readAllBytes() // download all
-              Minio.put(bucketName, hash, new ByteArrayInputStream(blob), blob.length, contentType)
-            case Some(length) =>
-              Minio.put(bucketName, hash, connection.inputStream, length, contentType)
-          }
-          println(s"Saved in cache ($hash)")
+          val blob: Array[Byte] = toMinio.readAllBytes() // download all
+          val length: Int = contentLengthOpt getOrElse blob.length
+          Minio.put(bucketName, hash, new ByteArrayInputStream(blob), length, contentType)
+
+          println(s"Saved in cache ($hash) size= $length / ${blob.length}")
 
         }.failed.foreach { error =>
           println(s"Cannot cache ($hash)\t$url\t"+error.getMessage)
         }
 
-        contentType -> connection.inputStream
+        contentType -> toClient
+
       }.recover { error =>
           TextPlainUtf8.toString -> new ByteArrayInputStream(error.getMessage.getBytes(UTF_8))
       }.toOption.toRight[Unit](())

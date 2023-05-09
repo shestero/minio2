@@ -67,16 +67,35 @@ trait Utils {
   given Conversion[URLConnection, URLConnectionOps] = URLConnectionOps(_)
 
   /** get two InputStream from the one */
-  case class InputStreamOps(input: InputStream) {
+  case class InputStreamOps(is: InputStream) {
+
+    // Not working well!
+    /*
     def duplicate: List[InputStream] = {
       val pipedOuts = List.fill(2)(new PipedOutputStream)
       val inputStreams = pipedOuts.map(new PipedInputStream(_))
       val tout = new TeeOutputStream(pipedOuts(0), pipedOuts(1))
-      val tin = new TeeInputStream(input, tout,  true)
+      val tin = new TeeInputStream(is, tout,  true)
       Future { tin.readAllBytes }
       inputStreams
     }
+    */
+
+    def iterator: Iterator[Int] = // in fact Iterator[Byte]
+      Iterator.continually(is.read).takeWhile(_ != -1)
+
   }
   given Conversion[InputStream, InputStreamOps] = InputStreamOps(_)
 
+  /**  */
+  case class IteratorOps(it: Iterator[Int]) {
+    def inputStream: InputStream =
+      new InputStream {
+        override def read(): Int = {
+          if (it.hasNext) it.next() // need to convert Byte to unsigned int
+          else -1
+        }
+      }
+  }
+  given Conversion[Iterator[Int], IteratorOps] = IteratorOps(_)
 }
