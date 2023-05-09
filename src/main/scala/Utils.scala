@@ -69,26 +69,14 @@ trait Utils {
   /** get two InputStream from the one */
   case class InputStreamOps(is: InputStream) {
 
-    // Not working well!
-    /*
-    def duplicate: List[InputStream] = {
-      val pipedOuts = List.fill(2)(new PipedOutputStream)
-      val inputStreams = pipedOuts.map(new PipedInputStream(_))
-      val tout = new TeeOutputStream(pipedOuts(0), pipedOuts(1))
-      val tin = new TeeInputStream(is, tout,  true)
-      Future { tin.readAllBytes }
-      inputStreams
-    }
-    */
-
     def iterator: Iterator[Int] = // in fact Iterator[Byte]
       Iterator.continually(is.read).takeWhile(_ != -1)
 
   }
   given Conversion[InputStream, InputStreamOps] = InputStreamOps(_)
 
-  /**  */
-  case class IteratorOps(it: Iterator[Int]) {
+  /** convert Iterator back to InputStream */
+  case class IteratorOps(it: Iterator[Int]) { // in fact Iterator[Byte]
     def inputStream: InputStream =
       new InputStream {
         override def read(): Int = {
