@@ -4,7 +4,7 @@ import java.io.{ByteArrayInputStream, InputStream }
 
 import scala.jdk.CollectionConverters._
 
-object Minio {
+object Minio extends CacheInterface {
 
 
   val minioClient = MinioClient.builder
@@ -18,8 +18,8 @@ object Minio {
 
   import minioClient._
 
-  def bucketExists(bucketName: String): Boolean =
-    minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())
+  override def bucketExists(bucket: String): Boolean =
+    minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())
 
   /**
    * Put object into minio storage
@@ -28,20 +28,26 @@ object Minio {
    * @param id     object id
    * @param blob   object blob
    */
-  def put(bucketName: String, id: String, inputStream: InputStream, size: Long, contentType: String = "binary/octet-stream"): Unit = {
+  override def put(
+                    bucket: String,
+                    id: String,
+                    inputStream: InputStream,
+                    size: Long,
+                    contentType: String = "binary/octet-stream"
+                  ): Unit = {
 
     // create bucket if not exists
-    if (!bucketExists(bucketName)) {
+    if (!bucketExists(bucket)) {
       makeBucket(
         MakeBucketArgs.builder()
-          .bucket(bucketName)
+          .bucket(bucket)
           .build()
       )
     }
 
     putObject(
       PutObjectArgs.builder
-        .bucket(bucketName)
+        .bucket(bucket)
         .`object`(id)
         .stream(inputStream, size, -1)
         .contentType(contentType)
@@ -57,10 +63,10 @@ object Minio {
    * @param bucket bucket name
    * @param id     object it
    */
-  def get(bucketName: String, id: String): GetObjectResponse /* extends FilterInputStream */ = 
+  override def get(bucket: String, id: String): GetObjectResponse /* extends FilterInputStream */ =
     getObject(
       GetObjectArgs.builder
-        .bucket(bucketName)
+        .bucket(bucket)
         .`object`(id)
         .build
     )
@@ -72,15 +78,26 @@ object Minio {
    * @param bucket bucket name
    * @param id     object it
    */
-  def delete(bucketName: String, id: String): Unit = {
+  override def delete(bucket: String, id: String): Unit = {
     removeObject(
       RemoveObjectArgs.builder()
-        .bucket(bucketName)
+        .bucket(bucket)
         .`object`(id)
         .build()
     )
 
-    println("bucket size\t= " + listObjects(ListObjectsArgs.builder().bucket(bucketName).build()).asScala.size)
+    println("bucket size\t= " + listObjects(ListObjectsArgs.builder().bucket(bucket).build()).asScala.size)
   }
 
+  /**
+   * get object info
+   */
+  override def stat(bucket: String, id: String): StatObjectResponse = {
+    Minio.minioClient.statObject(
+      StatObjectArgs.builder()
+        .bucket(bucket)
+        .`object`(id)
+        .build()
+    )
+  }
 }

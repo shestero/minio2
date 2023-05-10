@@ -7,14 +7,14 @@ import sttp.tapir.*
 import sttp.tapir.files.{FilesOptions, staticFilesGetServerEndpoint}
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.model.HeaderNames.ContentType
-import sttp.model.MediaType.{ApplicationOctetStream,TextPlainUtf8}
+import sttp.model.MediaType.{ApplicationOctetStream, TextPlainUtf8}
 
 import java.net.URI
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.lang.Character.MAX_RADIX
 import java.security.MessageDigest
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
@@ -28,10 +28,16 @@ object Main extends IOApp with Utils {
     val hash = sha3384(url)
     println(s"Asking for ($hash):\t$url")
 
+    Try {
+      Minio.stat(bucketName, hash)
+    } match
+      case Failure(e) =>  println(s"stat fails: " + e.getMessage) // may return "Object does not exist"
+      case Success(stat) => println("stat=" + stat) // example: last-modified=2023-05-10T13:49:22Z
+
     IO {
       val cached = Minio.get(bucketName, hash)
       println(s"Cached!\t$hash\t$url")
-      Right( cached.headers().get("Content-Type") -> cached.asInstanceOf[InputStream] )
+      Right(cached.headers().get("Content-Type") -> cached.asInstanceOf[InputStream])
     } orElse IO {
       println(s"Not in cache:\t$hash\t$url")
 
@@ -57,13 +63,13 @@ object Main extends IOApp with Utils {
           println(s"Saved in cache ($hash) size= $length / ${blob.length}")
 
         }.failed.foreach { error =>
-          println(s"Cannot cache ($hash)\t$url\t"+error.getMessage)
+          println(s"Cannot cache ($hash)\t$url\t" + error.getMessage)
         }
 
         contentType -> toClient
 
       }.recover { error =>
-          TextPlainUtf8.toString -> new ByteArrayInputStream(error.getMessage.getBytes(UTF_8))
+        TextPlainUtf8.toString -> new ByteArrayInputStream(error.getMessage.getBytes(UTF_8))
       }.toOption.toRight[Unit](())
     }
   }
