@@ -4,7 +4,7 @@ import java.io.{ByteArrayInputStream, InputStream }
 
 import scala.jdk.CollectionConverters._
 
-object Minio extends CacheInterface {
+object Minio extends CacheAPI {
 
 
   val minioClient = MinioClient.builder
@@ -18,7 +18,7 @@ object Minio extends CacheInterface {
 
   import minioClient._
 
-  override def bucketExists(bucket: String): Boolean =
+  def bucketExists(bucket: String): Boolean =
     minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())
 
   /**
