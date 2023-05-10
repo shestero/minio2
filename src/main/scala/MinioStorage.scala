@@ -4,7 +4,7 @@ import java.io.{ByteArrayInputStream, InputStream }
 
 import scala.jdk.CollectionConverters._
 
-object Minio extends CacheAPI {
+class MinioStorage extends CacheAPI {
 
 
   val minioClient = MinioClient.builder
@@ -21,13 +21,6 @@ object Minio extends CacheAPI {
   def bucketExists(bucket: String): Boolean =
     minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())
 
-  /**
-   * Put object into minio storage
-   *
-   * @param bucket bucket name
-   * @param id     object id
-   * @param blob   object blob
-   */
   override def put(
                     bucket: String,
                     id: String,
@@ -57,12 +50,6 @@ object Minio extends CacheAPI {
     inputStream.close()
   }
 
-  /**
-   * Get object from minio storage
-   *
-   * @param bucket bucket name
-   * @param id     object it
-   */
   override def get(bucket: String, id: String): GetObjectResponse /* extends FilterInputStream */ =
     getObject(
       GetObjectArgs.builder
@@ -70,14 +57,7 @@ object Minio extends CacheAPI {
         .`object`(id)
         .build
     )
-
-
-  /**
-   * remove object from minio storage
-   *
-   * @param bucket bucket name
-   * @param id     object it
-   */
+  
   override def delete(bucket: String, id: String): Unit = {
     removeObject(
       RemoveObjectArgs.builder()
@@ -89,11 +69,8 @@ object Minio extends CacheAPI {
     println("bucket size\t= " + listObjects(ListObjectsArgs.builder().bucket(bucket).build()).asScala.size)
   }
 
-  /**
-   * get object info
-   */
   override def stat(bucket: String, id: String): StatObjectResponse = {
-    Minio.minioClient.statObject(
+    minioClient.statObject(
       StatObjectArgs.builder()
         .bucket(bucket)
         .`object`(id)

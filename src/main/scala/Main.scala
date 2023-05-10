@@ -22,6 +22,7 @@ import scala.concurrent.duration.Duration
 
 object Main extends IOApp with Utils {
 
+  val storage = new MinioStorage
   val bucketName = "web-resources"
 
   val logic: String => IO[Either[Unit, (String,InputStream)]] = url => {
@@ -29,13 +30,13 @@ object Main extends IOApp with Utils {
     println(s"Asking for ($hash):\t$url")
 
     Try {
-      Minio.stat(bucketName, hash)
+      storage.stat(bucketName, hash)
     } match
       case Failure(e) =>  println(s"stat fails: " + e.getMessage) // may return "Object does not exist"
       case Success(stat) => println("stat=" + stat) // example: last-modified=2023-05-10T13:49:22Z
 
     IO {
-      val cached = Minio.get(bucketName, hash)
+      val cached = storage.get(bucketName, hash)
       println(s"Cached!\t$hash\t$url")
       Right(cached.headers().get("Content-Type") -> cached.asInstanceOf[InputStream])
     } orElse IO {
@@ -58,7 +59,7 @@ object Main extends IOApp with Utils {
           // save to Minio
           val blob: Array[Byte] = toMinio.readAllBytes() // download all
           val length: Int = contentLengthOpt getOrElse blob.length
-          Minio.put(bucketName, hash, new ByteArrayInputStream(blob), length, contentType)
+          storage.put(bucketName, hash, new ByteArrayInputStream(blob), length, contentType)
 
           println(s"Saved in cache ($hash) size= $length / ${blob.length}")
 
@@ -93,7 +94,7 @@ object Main extends IOApp with Utils {
   /*
   // delete object
   println("delete")
-  Minio.delete("bucketName", "01234")
+  storage.delete("bucketName", "01234")
   */
 
   val routes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes( List(cacheEndpoint, rootEndpoint) )
