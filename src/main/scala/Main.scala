@@ -38,7 +38,7 @@ object Main extends IOApp with Utils {
     IO {
       val cached = storage.get(bucketName, hash)
       println(s"Cached!\t$hash\t$url")
-      Right(cached.headers().get("Content-Type") -> cached.asInstanceOf[InputStream])
+      Right(cached)
     } orElse IO {
       println(s"Not in cache:\t$hash\t$url")
 
@@ -50,10 +50,7 @@ object Main extends IOApp with Utils {
         println("contentLength=" + contentLengthOpt)
         println("contentType=" + contentType)
 
-        // duplicate connection.inputStream: InputStream
-        val it: Iterator[Int] = connection.inputStream.iterator
-        val (it1, it2) = it.duplicate
-        val (toClient, toMinio) = (it1.inputStream, it2.inputStream)
+        val (toClient, toMinio) = connection.inputStream.duplicate
 
         Future {
           // save to Minio

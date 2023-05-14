@@ -18,18 +18,17 @@ class FileStorage extends CacheAPI {
     Files.copy(inputStream, output)
   }
 
-  override def get(bucket: String, id: String): GetObjectResponse /* extends FilterInputStream */ = {
+  override def get(bucket: String, id: String): (String, InputStream) = {
     val fileName = s"$dir/$bucket/$id"
-    new FileInputStream(fileName)
-    null // TODO
+    "binary/octet-stream" -> new FileInputStream(fileName)
   }
 
   override def delete(bucket: String, id: String): Unit = {
     // TODO
   }
 
-  override def stat(bucket: String, id: String): StatObjectResponse = {
-    null // TODO
+  override def stat(bucket: String, id: String): Map[String, String] = {
+    Map.empty // TODO
   }
 
 }

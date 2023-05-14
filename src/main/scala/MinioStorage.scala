@@ -50,14 +50,17 @@ class MinioStorage extends CacheAPI {
     inputStream.close()
   }
 
-  override def get(bucket: String, id: String): GetObjectResponse /* extends FilterInputStream */ =
-    getObject(
-      GetObjectArgs.builder
-        .bucket(bucket)
-        .`object`(id)
-        .build
-    )
-  
+  override def get(bucket: String, id: String): (String, InputStream) = {
+    val response: GetObjectResponse /* extends FilterInputStream */ =
+      getObject(
+        GetObjectArgs.builder
+          .bucket(bucket)
+          .`object`(id)
+          .build
+      )
+    response.headers().get("Content-Type") -> response
+  }
+
   override def delete(bucket: String, id: String): Unit = {
     removeObject(
       RemoveObjectArgs.builder()
@@ -69,12 +72,14 @@ class MinioStorage extends CacheAPI {
     println("bucket size\t= " + listObjects(ListObjectsArgs.builder().bucket(bucket).build()).asScala.size)
   }
 
-  override def stat(bucket: String, id: String): StatObjectResponse = {
-    minioClient.statObject(
-      StatObjectArgs.builder()
-        .bucket(bucket)
-        .`object`(id)
-        .build()
-    )
+  override def stat(bucket: String, id: String): Map[String, String] = {
+    val response: StatObjectResponse =
+      minioClient.statObject(
+        StatObjectArgs.builder()
+          .bucket(bucket)
+          .`object`(id)
+          .build()
+      )
+    response.headers().asScala.map(pair => pair.getFirst -> pair.getSecond).toMap // from kotlin.Pair -s
   }
 }

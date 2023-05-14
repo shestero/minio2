@@ -66,16 +66,7 @@ trait Utils {
   }
   given Conversion[URLConnection, URLConnectionOps] = URLConnectionOps(_)
 
-  /** get two InputStream from the one */
-  case class InputStreamOps(is: InputStream) {
-
-    def iterator: Iterator[Int] = // in fact Iterator[Byte]
-      Iterator.continually(is.read).takeWhile(_ != -1)
-
-  }
-  given Conversion[InputStream, InputStreamOps] = InputStreamOps(_)
-
-  /** convert Iterator back to InputStream */
+  /** convert Iterator to InputStream */
   case class IteratorOps(it: Iterator[Int]) { // in fact Iterator[Byte]
     def inputStream: InputStream =
       new InputStream {
@@ -86,4 +77,19 @@ trait Utils {
       }
   }
   given Conversion[Iterator[Int], IteratorOps] = IteratorOps(_)
+
+  case class InputStreamOps(is: InputStream) {
+
+    /** convert InputStream to Iterator */
+    def iterator: Iterator[Int] = // in fact Iterator[Byte]
+      Iterator.continually(is.read).takeWhile(_ != -1)
+
+    /** duplocate InputStream */
+    def duplicate: (InputStream, InputStream) = {
+      val (it1, it2) = is.iterator.duplicate
+      (it1.inputStream, it2.inputStream)
+    }
+  }
+  given Conversion[InputStream, InputStreamOps] = InputStreamOps(_)
+
 }
