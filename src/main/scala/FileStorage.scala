@@ -3,6 +3,7 @@ import io.minio.{GetObjectResponse, StatObjectResponse}
 import java.io.{File, FileInputStream, FileOutputStream, InputStream, PrintWriter}
 import java.nio.file.{Files, Path}
 import scala.io.Source
+import scala.util.Try
 
 class FileStorage extends CacheAPI {
 
@@ -20,7 +21,24 @@ class FileStorage extends CacheAPI {
     if (!f.exists()) f.mkdir()
 
     val fileName = s"$bucketPath/$id"
-    Files.copy(inputStream, Path.of(fileName))
+    // Files.copy(inputStream, Path.of(fileName)) // consider not safe
+
+    val outputStream = new FileOutputStream(fileName)
+    val channel = outputStream.getChannel()
+
+    Try {
+      val lock = channel.tryLock() // can throw OverlappingFileLockException
+      if (lock!=null) {
+        inputStream.transferTo(outputStream)
+        lock.release()
+      } else {
+        System.err.println(s"File $fileName is locked. Cannot write into it.")
+      }
+    }.failed.foreach { e =>
+      System.err.println(s"Failed to write into file $fileName; error=${e.getMessage}")
+    }
+    outputStream.close()
+    channel.close()
 
     // save contentType
     new PrintWriter(s"$fileName.mime") {

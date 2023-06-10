@@ -6,8 +6,6 @@ import org.apache.commons.io.output.TeeOutputStream
 
 import java.io.IOException
 import java.io.InputStream
-import java.io.PipedInputStream
-import java.io.PipedOutputStream
 import java.lang.Character.MAX_RADIX
 import java.nio.charset.StandardCharsets.UTF_8
 import java.security.MessageDigest
